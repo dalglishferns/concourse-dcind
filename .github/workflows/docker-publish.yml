@@ -35,7 +35,7 @@ jobs:
         uses: docker/login-action@v2
         with:
           username: dalglish14
-          password: ${{ secrets.DOCKERHUB_TOKEN }}  # Use the Docker Hub token from GitHub secrets
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Extract Docker metadata
         id: meta
@@ -56,7 +56,4 @@ jobs:
 
       - name: Sign the published Docker image
         if: ${{ github.event_name != 'pull_request' }}
-        env:
-          TAGS: ${{ steps.meta.outputs.tags }}
-          DIGEST: ${{ steps.build-and-push.outputs.digest }}
-        run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
+        run: cosign sign --key ${{ secrets.COSIGN_KEY }} ${TAGS}@${DIGEST}
