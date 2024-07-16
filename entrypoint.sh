@@ -38,7 +38,7 @@ sanitize_cgroups() {
     fi
   fi
 
-  sed -e 1d /proc/cgroups | while read sys hierarchy num enabled; do
+  sed -e 1d /proc/cgroups | while read -r sys hierarchy num enabled; do
     if [[ "${enabled}" != "1" ]]; then
       # subsystem disabled; skip
       continue
@@ -95,7 +95,7 @@ start_docker() {
 
   # Pass through `--garden-mtu` from gardian container
   if [[ "${docker_opts}" != *'--mtu'* ]]; then
-    local mtu="$(cat /sys/class/net/$(ip route get 8.8.8.8|awk '{ print $5 }')/mtu)"
+    local mtu="$(cat /sys/class/net/$(ip route get 8.8.8.8 | awk '{ print $5 }')/mtu)"
     docker_opts+=" --mtu ${mtu}"
   fi
 
@@ -128,7 +128,7 @@ await_docker() {
       fi
       exit 1
     fi
-    if [[ -f "${DOCKERD_PID_FILE}" ]] && ! kill -0 $(cat "${DOCKERD_PID_FILE}"); then
+    if [[ -f "${DOCKERD_PID_FILE}" ]] && ! kill -0 "$(cat "${DOCKERD_PID_FILE}")"; then
       echo >&2 'Docker daemon failed to start.'
       if [[ -f "${DOCKERD_LOG_FILE}" ]]; then
         echo >&2 '---DOCKERD LOGS---'
@@ -147,26 +147,5 @@ stop_docker() {
   if ! [[ -f "${DOCKERD_PID_FILE}" ]]; then
     return 0
   fi
-  local docker_pid="$(cat ${DOCKERD_PID_FILE})"
-  if [[ -z "${docker_pid}" ]]; then
-    return 0
-  fi
-  echo >&2 "Terminating Docker daemon."
-  kill -TERM ${docker_pid}
-  local start=${SECONDS}
-  echo >&2 "Waiting for Docker daemon to exit..."
-  wait ${docker_pid}
-  local duration=$(( SECONDS - start ))
-  echo >&2 "Docker exited after ${duration} seconds."
-}
-
-start_docker
-trap stop_docker EXIT
-await_docker
-
-# do not exec, because exec disables traps
-if [[ "$#" != "0" ]]; then
-  "$@"
-else
-  bash --login
-fi
+  local docker_pid
+  docker_pid="$(cat ${DO
