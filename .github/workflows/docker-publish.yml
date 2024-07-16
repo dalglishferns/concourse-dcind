@@ -56,6 +56,4 @@ jobs:
 
       - name: Sign the published Docker image
         if: ${{ github.event_name != 'pull_request' }}
-        env:
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}  # Use if the key is password protected
         run: cosign sign --key ${{ secrets.COSIGN_KEY }} ${TAGS}@${DIGEST}
