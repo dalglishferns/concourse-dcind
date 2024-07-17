@@ -14,12 +14,19 @@ DOCKERD_LOG_FILE="/tmp/docker.log"
 # Function to start the Docker daemon
 start_docker() {
   echo >&2 "Setting up Docker environment..."
-  
+
   # Ensure cgroups are mounted correctly
   if ! mountpoint -q /sys/fs/cgroup; then
     echo >&2 "Mounting cgroups..."
-    mkdir -p /sys/fs/cgroup
-    mount -t cgroup2 none /sys/fs/cgroup || mount -t cgroup -o rdma cgroup /sys/fs/cgroup
+    mount -t tmpfs none /sys/fs/cgroup
+    mkdir /sys/fs/cgroup/{cpu,cpuset,devices,freezer,memory,pids,blkio}
+    mount -t cgroup -o cpu none /sys/fs/cgroup/cpu
+    mount -t cgroup -o cpuset none /sys/fs/cgroup/cpuset
+    mount -t cgroup -o devices none /sys/fs/cgroup/devices
+    mount -t cgroup -o freezer none /sys/fs/cgroup/freezer
+    mount -t cgroup -o memory none /sys/fs/cgroup/memory
+    mount -t cgroup -o pids none /sys/fs/cgroup/pids
+    mount -t cgroup -o blkio none /sys/fs/cgroup/blkio
   fi
 
   echo >&2 "Starting Docker daemon..."
