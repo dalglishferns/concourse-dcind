@@ -66,8 +66,6 @@ sanitize_cgroups() {
 
 start_docker() {
   echo >&2 "Setting up Docker environment..."
-  mkdir -p /var/log
-  mkdir -p /var/run
 
   sanitize_cgroups
 
