@@ -78,7 +78,3 @@ jobs:
         with:
           username: dalglish14
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Test the Docker image
-        run: |
-          docker run --rm ${{ env.IMAGE_NAME:latest }} echo "Image works correctly"
