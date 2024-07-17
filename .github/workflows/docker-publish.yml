@@ -81,4 +81,4 @@ jobs:
 
       - name: Test the Docker image
         run: |
-          docker run --rm ${{ steps.meta.outputs.tags[0] }} echo "Image works correctly"
+          docker run --rm ${{ env.IMAGE_NAME:latest }} echo "Image works correctly"
