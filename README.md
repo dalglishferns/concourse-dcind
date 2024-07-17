@@ -14,13 +14,6 @@ Images are published under `ghcr.io/dalglish14/concourse-dind` which includes Do
 - Passes through `--garden-mtu` from the parent Gardian container if `--mtu` is not specified in `DOCKER_OPTS`.
 - Sets `--data-root /scratch/docker` to bypass the graph filesystem if `--data-root` is not specified in `DOCKER_OPTS`.
 
-## Run & Build
-The image is available on DockerHub, but if you would like to build locally, clone and run:
-
-```bash
-docker run ghcr.io/dalglish14/concourse-dind
-```
-
 ## Example
 Here is an example of a Concourse [job](http://concourse.ci/concepts.html) to run several containers in a task, and then run the integration test suite.
 
