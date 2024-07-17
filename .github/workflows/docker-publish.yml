@@ -76,3 +76,6 @@ jobs:
       - name: Test the Docker image
         run: |
           docker run --rm ${{ steps.meta.outputs.tags }} echo "Image works correctly"
+        with:
+          username: dalglish14
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
