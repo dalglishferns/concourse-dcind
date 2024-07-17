@@ -42,6 +42,17 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: dalglish14/concourse-dcind
+          tags: |
+            type=ref,event=branch,pattern=main
+            type=ref,event=tag
+
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
 
       - name: Build and push Docker image
         id: build-and-push
@@ -49,7 +60,19 @@ jobs:
         with:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
-          tags: dalglish14/concourse-dcind:latest
+          tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Sign the Docker image
+        if: github.event_name != 'pull_request'
+        env:
+          COSIGN_EXPERIMENTAL: "true"
+        run: |
+          echo "${{ secrets.COSIGN_KEY }}" > cosign.key
+          cosign sign --key cosign.key ${{ steps.build-and-push.outputs.digest }}
+
+      - name: Test the Docker image
+        run: |
+          docker run --rm ${{ steps.meta.outputs.tags }} echo "Image works correctly"
