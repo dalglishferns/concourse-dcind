@@ -41,7 +41,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: dalglish14/concourse-dcind
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=ref,event=branch,pattern=main
             type=ref,event=tag
@@ -81,4 +81,4 @@ jobs:
 
       - name: Test the Docker image
         run: |
-          docker run --rm ${{ steps.meta.outputs.tags }} echo "Image works correctly"
+          docker run --rm ${{ steps.meta.outputs.tags[0] }} echo "Image works correctly"
