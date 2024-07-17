@@ -9,7 +9,7 @@ on:
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: dalglish14/concourse-dind
+  IMAGE_NAME: dalglish14/concourse-dcind
 
 jobs:
   build:
@@ -41,7 +41,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: dalglish14/concourse-dind
+          images: dalglish14/concourse-dcind
 
       - name: Build and push Docker image
         id: build-and-push
@@ -49,7 +49,7 @@ jobs:
         with:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
-          tags: dalglish14/concourse-dind:latest
+          tags: dalglish14/concourse-dcind:latest
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
