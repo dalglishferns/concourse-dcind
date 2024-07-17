@@ -2,39 +2,96 @@
 
 set -o errexit -o pipefail -o nounset
 
-# Waits DOCKERD_TIMEOUT seconds for startup (default: 60)
 DOCKERD_TIMEOUT="${DOCKERD_TIMEOUT:-60}"
-# Accepts optional DOCKER_OPTS (default: --data-root /scratch/docker)
 DOCKER_OPTS="${DOCKER_OPTS:-}"
 
-# Constants
 DOCKERD_PID_FILE="/tmp/docker.pid"
 DOCKERD_LOG_FILE="/tmp/docker.log"
 
-# Function to start the Docker daemon
+sanitize_cgroups() {
+  local cgroup="/sys/fs/cgroup"
+
+  mkdir -p "${cgroup}"
+  if ! mountpoint -q "${cgroup}"; then
+    if ! mount -t tmpfs -o uid=0,gid=0,mode=0755 cgroup "${cgroup}"; then
+      echo >&2 "Could not make a tmpfs mount. Did you use --privileged?"
+      exit 1
+    fi
+  fi
+  mount -o remount,rw "${cgroup}"
+
+  export container=docker
+
+  if [[ -d /sys/kernel/security ]] && ! mountpoint -q /sys/kernel/security; then
+    if ! mount -t securityfs none /sys/kernel/security; then
+      echo >&2 "Could not mount /sys/kernel/security."
+      echo >&2 "AppArmor detection and --privileged mode might break."
+    fi
+  fi
+
+  sed -e 1d /proc/cgroups | while read -r sys hierarchy num enabled; do
+    if [[ "${enabled}" != "1" ]]; then
+      continue
+    fi
+
+    grouping="$(cat /proc/self/cgroup | cut -d: -f2 | grep "\\<${sys}\\>")"
+    if [[ -z "${grouping}" ]]; then
+      grouping="${sys}"
+    fi
+
+    mountpoint="${cgroup}/${grouping}"
+
+    mkdir -p "${mountpoint}"
+
+    if mountpoint -q "${mountpoint}"; then
+      umount "${mountpoint}"
+    fi
+
+    mount -n -t cgroup -o "${grouping}" cgroup "${mountpoint}"
+
+    if [[ "${grouping}" != "${sys}" ]]; then
+      if [[ -L "${cgroup}/${sys}" ]]; then
+        rm "${cgroup}/${sys}"
+      fi
+
+      ln -s "${mountpoint}" "${cgroup}/${sys}"
+    fi
+  done
+
+  if ! [[ -d /sys/fs/cgroup/systemd ]]; then
+    mkdir "${cgroup}/systemd"
+    mount -t cgroup -o none,name=systemd cgroup "${cgroup}/systemd"
+  fi
+}
+
 start_docker() {
   echo >&2 "Setting up Docker environment..."
 
-  # Ensure cgroups are mounted correctly
-  if ! mountpoint -q /sys/fs/cgroup; then
-    echo >&2 "Mounting cgroups..."
-    mount -t tmpfs none /sys/fs/cgroup
-    mkdir /sys/fs/cgroup/{cpu,cpuset,devices,freezer,memory,pids,blkio}
-    mount -t cgroup -o cpu none /sys/fs/cgroup/cpu
-    mount -t cgroup -o cpuset none /sys/fs/cgroup/cpuset
-    mount -t cgroup -o devices none /sys/fs/cgroup/devices
-    mount -t cgroup -o freezer none /sys/fs/cgroup/freezer
-    mount -t cgroup -o memory none /sys/fs/cgroup/memory
-    mount -t cgroup -o pids none /sys/fs/cgroup/pids
-    mount -t cgroup -o blkio none /sys/fs/cgroup/blkio
+  sanitize_cgroups
+
+  if grep '/proc/sys\s\+\w\+\s\+ro,' /proc/mounts >/dev/null; then
+    mount -o remount,rw /proc/sys
   fi
 
-  echo >&2 "Starting Docker daemon..."
-  dockerd ${DOCKER_OPTS} &> "${DOCKERD_LOG_FILE}" &
+  local docker_opts="${DOCKER_OPTS:-}"
+
+  if [[ "${docker_opts}" != *'--mtu'* ]]; then
+    local mtu="$(cat /sys/class/net/$(ip route get 8.8.8.8 | awk '{ print $5 }')/mtu)"
+    docker_opts+=" --mtu ${mtu}"
+  fi
+
+  if [[ "${docker_opts}" != *'--data-root'* ]] && [[ "${docker_opts}" != *'--graph'* ]]; then
+    docker_opts+=' --data-root /scratch/docker'
+  fi
+
+  rm -f "${DOCKERD_PID_FILE}"
+  touch "${DOCKERD_LOG_FILE}"
+
+  echo >&2 "Starting Docker..."
+  dockerd ${docker_opts} &>"${DOCKERD_LOG_FILE}" &
   echo "$!" > "${DOCKERD_PID_FILE}"
 }
 
-# Function to wait for the Docker daemon to be healthy
 await_docker() {
   local timeout="${DOCKERD_TIMEOUT}"
   echo >&2 "Waiting ${timeout} seconds for Docker to be available..."
@@ -63,33 +120,23 @@ await_docker() {
   echo >&2 "Docker available after ${duration} seconds."
 }
 
-# Function to stop the Docker daemon gracefully
 stop_docker() {
   if ! [[ -f "${DOCKERD_PID_FILE}" ]]; then
     return 0
   fi
   local docker_pid
-  docker_pid="$(cat "${DOCKERD_PID_FILE}")"
-  if [[ -z "${docker_pid}" ]]; then
-    return 0
+  docker_pid="$(cat ${DOCKERD_PID_FILE})"
+  if kill -0 "${docker_pid}"; then
+    echo >&2 "Stopping Docker daemon..."
+    kill "${docker_pid}"
+    wait "${docker_pid}"
   fi
-  echo >&2 "Terminating Docker daemon."
-  kill -TERM "${docker_pid}"
-  local start=${SECONDS}
-  echo >&2 "Waiting for Docker daemon to exit..."
-  wait "${docker_pid}"
-  local duration=$(( SECONDS - start ))
-  echo >&2 "Docker exited after ${duration} seconds."
+  rm -f "${DOCKERD_PID_FILE}"
 }
 
-# Start Docker and set up trap to stop it on exit
-start_docker
 trap stop_docker EXIT
+
+start_docker
 await_docker
 
-# Execute passed commands or start a shell
-if [[ "$#" != "0" ]]; then
-  "$@"
-else
-  bash --login
-fi
+exec "$@"
