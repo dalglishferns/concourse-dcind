@@ -43,7 +43,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=ref,event=branch,pattern=main,tag=latest
+            type=ref,event=branch,tag=latest
             type=ref,event=tag
 
       - name: Cache Docker layers
