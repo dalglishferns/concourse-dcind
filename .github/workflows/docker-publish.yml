@@ -131,7 +131,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.current_version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${{ env.current_version }}
 
       - name: Cache Docker layers
         uses: actions/cache@v3
@@ -148,7 +148,7 @@ jobs:
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.current_version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${{ env.current_version }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
