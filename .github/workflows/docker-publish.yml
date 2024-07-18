@@ -63,10 +63,10 @@ jobs:
           git commit -m "Bump version to $new_version"
         shell: bash
 
-      - name: Push new branch
+      - name: Fetch and rebase before pushing
         run: |
           git fetch origin
-          git rebase origin/main
+          git pull origin version-bump-$new_version --rebase
           git push origin HEAD:version-bump-$new_version
         shell: bash
 
