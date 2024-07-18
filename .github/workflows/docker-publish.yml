@@ -49,18 +49,22 @@ jobs:
         id: determine_version
         run: |
           mkdir -p tmp
-          if git describe --tags --abbrev=0 > /dev/null 2>&1; then
-            latest_tag=$(git describe --tags --abbrev=0)
-            latest_version=$(echo $latest_tag | sed 's/v//')
-            IFS='.' read -r -a version_parts <<< "$latest_version"
-            major=${version_parts[0]}
-            minor=${version_parts[1]}
-            patch=${version_parts[2]}
-            new_patch=$((patch + 1))
-            new_version="v${major}.${minor}.${new_patch}"
+          if [ -f tmp/version.txt ]; then
+            latest_version=$(cat tmp/version.txt)
           else
-            new_version="v0.1.0"
+            if git describe --tags --abbrev=0 > /dev/null 2>&1; then
+              latest_tag=$(git describe --tags --abbrev=0)
+              latest_version=$(echo $latest_tag | sed 's/v//')
+            else
+              latest_version="0.1.0"
+            fi
           fi
+          IFS='.' read -r -a version_parts <<< "$latest_version"
+          major=${version_parts[0]}
+          minor=${version_parts[1]}
+          patch=${version_parts[2]}
+          new_patch=$((patch + 1))
+          new_version="v${major}.${minor}.${new_patch}"
           echo "New version: $new_version"
           echo $new_version > tmp/version.txt
           echo "new_version=$new_version" >> $GITHUB_ENV
@@ -137,7 +141,8 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ steps.meta.outputs.tags }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.current_version }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
