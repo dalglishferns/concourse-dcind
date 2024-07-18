@@ -45,7 +45,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Determine next version of app
+      - name: Determine next version
         id: determine_version
         run: |
           mkdir -p tmp
@@ -56,7 +56,7 @@ jobs:
               latest_tag=$(git describe --tags --abbrev=0)
               latest_version=$(echo $latest_tag | sed 's/v//')
             else
-              latest_version="v0.1.0"
+              latest_version="0.1.0"
             fi
           fi
           IFS='.' read -r -a version_parts <<< "$latest_version"
@@ -76,6 +76,7 @@ jobs:
           git checkout -b version-bump-${{ env.new_version }}
           git add tmp/version.txt
           git commit -m "Add version file with new version ${{ env.new_version }}"
+          git pull --rebase origin version-bump-${{ env.new_version }} || true
           git push origin HEAD:version-bump-${{ env.new_version }}
         shell: bash
 
