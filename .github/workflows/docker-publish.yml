@@ -126,4 +126,23 @@ jobs:
 
       - name: Build and push Docker image
         id: build-and-push
-    
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Merge and push version bump commit and tag
+        run: |
+          git fetch --all
+          git checkout main
+          new_version=$(cat temp_version.txt)
+          git merge origin/version-bump-${{ needs.version_bump.outputs.new_version }} --no-ff
+          git push origin main --follow-tags
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
