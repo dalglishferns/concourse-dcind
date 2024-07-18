@@ -15,7 +15,7 @@ Images are published under `ghcr.io/dalglish14/concourse-dind` which includes Do
 - Sets `--data-root /scratch/docker` to bypass the graph filesystem if `--data-root` is not specified in `DOCKER_OPTS`.
 
 ## Example
-Here is an example of a Concourse [job](http://concourse.ci/concepts.html) to run several containers in a task, and then run the integration test suite.
+Here is an example of a Concourse [job](http://concourse.ci/concepts.html) to run several containers in a task and then run the integration test suite.
 
 ```yaml
 jobs:
