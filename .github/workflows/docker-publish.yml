@@ -50,7 +50,7 @@ jobs:
           git add VERSION
           git commit -m "Bump version to $new_version"
           git tag $new_version
-          git push origin HEAD:main --follow-tags
+          git push https://${{ secrets.ACTIONS_PAT }}@github.com/${{ github.repository }} HEAD:main --follow-tags
         shell: bash
 
       - name: Extract Docker metadata
