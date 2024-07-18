@@ -35,10 +35,7 @@ jobs:
 
   version_bump:
     runs-on: ubuntu-latest
-    needs: pr_check
-    if: github.ref == 'refs/heads/main'
-    outputs:
-      new_version: ${{ steps.increment_version.outputs.new_version }}
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -48,12 +45,12 @@ jobs:
       - name: Get current version
         id: get_version
         run: echo "::set-output name=current_version::$(cat VERSION)"
-        
+
       - name: Increment version
         id: increment_version
         run: |
           current_version=${{ steps.get_version.outputs.current_version }}
-          new_version=$(echo $current_version | awk -F. '{printf("%d.%d.%d", $1, $2+1, $3)}')
+          new_version=$(echo $current_version | awk -F. '{printf("v%d.%d.%d", $1, $2+1, $3)}')
           echo "New version: $new_version"
           echo $new_version > VERSION
           echo $new_version > temp_version.txt
@@ -62,6 +59,7 @@ jobs:
           git checkout -b version-bump-$new_version
           git add VERSION
           git commit -m "Bump version to $new_version"
+          git push origin HEAD:version-bump-$new_version
           echo "::set-output name=new_version::${new_version}"
         shell: bash
 
@@ -79,8 +77,8 @@ jobs:
 
   build_and_push:
     runs-on: ubuntu-latest
-    needs: version_bump
     if: github.event.pull_request.merged == true
+    needs: version_bump
     permissions:
       contents: write
       packages: write
@@ -134,8 +132,7 @@ jobs:
       - name: Push version bump commit and tag
         if: success()
         run: |
-          new_version=$(cat temp_version.txt)
-          git push origin HEAD:version-bump-$new_version
-          git push origin ${new_version}
+          git checkout version-bump-${{ needs.version_bump.outputs.new_version }}
+          git push origin HEAD:main --follow-tags
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
