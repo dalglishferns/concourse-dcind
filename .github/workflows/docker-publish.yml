@@ -59,7 +59,7 @@ jobs:
           echo "::set-output name=new_version::$new_version"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
-          git checkout -b version-bump-$new_version
+          git checkout -b version-bump-${{ steps.increment_version.outputs.new_version }}
           git add VERSION
           git commit -m "Bump version to $new_version"
         shell: bash
@@ -82,6 +82,7 @@ jobs:
           body: |
             This PR bumps the version to ${{ steps.increment_version.outputs.new_version }}.
           labels: version bump
+          branch-suffix: '-pr'
 
   build_and_push:
     runs-on: ubuntu-latest
