@@ -142,7 +142,7 @@ jobs:
           git fetch --all
           git checkout main
           new_version=$(cat temp_version.txt)
-          git merge origin/version-bump-${{ steps.version_bump.outputs.new_version }} --no-ff
+          git merge origin/version-bump-${{ needs.version_bump.outputs.new_version }} --no-ff
           git push origin main --follow-tags
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
