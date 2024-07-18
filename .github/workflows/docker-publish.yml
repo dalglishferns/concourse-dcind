@@ -39,7 +39,8 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=ref,event=tag,pattern=latest
+            type=ref,event=branch,pattern=main,tag=latest
+            type=ref,event=tag,pattern=v*.*.*,tag={{version}}
 
       - name: Cache Docker layers
         uses: actions/cache@v3
