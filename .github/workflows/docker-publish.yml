@@ -39,8 +39,6 @@ jobs:
   version_bump:
     if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
     runs-on: ubuntu-latest
-    outputs:
-      new_version: ${{ steps.determine_version.outputs.new_version }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -51,7 +49,7 @@ jobs:
         id: determine_version
         run: |
           mkdir -p tmp
-          if git describe --tags --abbrev=0; then
+          if git describe --tags --abbrev=0 > /dev/null 2>&1; then
             latest_tag=$(git describe --tags --abbrev=0)
             latest_version=$(echo $latest_tag | sed 's/v//')
             IFS='.' read -r -a version_parts <<< "$latest_version"
@@ -90,7 +88,7 @@ jobs:
           labels: version bump
 
   build_and_push:
-    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'version-bump-')
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main' && startsWith(github.event.pull_request.head.ref, 'version-bump-')
     runs-on: ubuntu-latest
     permissions:
       contents: write
