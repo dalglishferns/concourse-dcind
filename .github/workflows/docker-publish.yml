@@ -33,11 +33,14 @@ jobs:
           push: false
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:pr-test
 
-  version_bump:
+  build_and_push:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-    outputs:
-      new_version: ${{ steps.increment_version.outputs.new_version }}
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -55,49 +58,18 @@ jobs:
           new_version=$(echo $current_version | awk -F. '{printf("v%d.%d.%d", $1, $2+1, $3)}')
           echo "New version: $new_version"
           echo $new_version > VERSION
-          echo $new_version > temp_version.txt
           echo "::set-output name=new_version::$new_version"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
-          git checkout -b version-bump-${{ steps.increment_version.outputs.new_version }}
+          git checkout -b version-bump-$new_version
           git add VERSION
           git commit -m "Bump version to $new_version"
+          git push origin HEAD:version-bump-$new_version
+          git checkout main
+          git pull origin main
+          git merge --no-ff version-bump-$new_version
+          git push origin main --follow-tags
         shell: bash
-
-      - name: Fetch, rebase, and push new branch
-        run: |
-          git fetch origin
-          git rebase origin/main
-          git push origin HEAD:version-bump-${{ steps.increment_version.outputs.new_version }}
-        shell: bash
-
-      - name: Create Pull Request
-        id: create_pr
-        uses: peter-evans/create-pull-request@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          head-branch: version-bump-${{ steps.increment_version.outputs.new_version }}
-          base-branch: main
-          title: Bump version to ${{ steps.increment_version.outputs.new_version }}
-          body: |
-            This PR bumps the version to ${{ steps.increment_version.outputs.new_version }}.
-          labels: version bump
-          branch-suffix: '-pr'
-
-  build_and_push:
-    runs-on: ubuntu-latest
-    needs: version_bump
-    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
-    permissions:
-      contents: write
-      packages: write
-      id-token: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -115,7 +87,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=ref,event=branch,pattern=main,tag=latest
-            type=ref,event=tag,pattern=v*.*.*,tag={{version}}
+            type=ref,event=semver,pattern=${{ steps.increment_version.outputs.new_version }},prefix=v
 
       - name: Cache Docker layers
         uses: actions/cache@v3
@@ -126,24 +98,11 @@ jobs:
             ${{ runner.os }}-buildx-
 
       - name: Build and push Docker image
-        id: build-and-push
         uses: docker/build-push-action@v3
         with:
           context: .
           push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ steps.meta.outputs.tags }}
+          tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      - name: Merge and push version bump commit and tag
-        run: |
-          git fetch --all
-          git checkout main
-          new_version=$(cat temp_version.txt)
-          git merge origin/version-bump-${{ needs.version_bump.outputs.new_version }} --no-ff
-          git push origin main --follow-tags
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
