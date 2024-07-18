@@ -37,7 +37,7 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:pr-test
 
   version_bump:
-    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     outputs:
       new_version: ${{ steps.determine_version.outputs.new_version }}
@@ -131,7 +131,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.current_version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${{ env.current_version }}
 
       - name: Cache Docker layers
         uses: actions/cache@v3
@@ -148,7 +148,7 @@ jobs:
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.current_version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${{ env.current_version }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
