@@ -56,12 +56,12 @@ jobs:
           echo "New version: $new_version"
           echo $new_version > VERSION
           echo $new_version > temp_version.txt
+          echo "::set-output name=new_version::$new_version"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
-          git checkout -b version-bump-${{ new_version }}
+          git checkout -b version-bump-$new_version
           git add VERSION
           git commit -m "Bump version to $new_version"
-          echo "::set-output name=new_version::$new_version"
         shell: bash
 
       - name: Fetch, rebase, and push new branch
@@ -126,23 +126,4 @@ jobs:
 
       - name: Build and push Docker image
         id: build-and-push
-        uses: docker/build-push-action@v3
-        with:
-          context: .
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Merge and push version bump commit and tag
-        run: |
-          git fetch --all
-          git checkout main
-          new_version=$(cat temp_version.txt)
-          git merge origin/version-bump-${{ needs.version_bump.outputs.new_version }} --no-ff
-          git push origin main --follow-tags
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
