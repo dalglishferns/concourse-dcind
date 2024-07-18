@@ -73,13 +73,14 @@ jobs:
 
       - name: Commit version file
         run: |
+          new_version=$(cat tmp/version.txt)
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
-          git checkout -b version-bump-${{ steps.determine_version.outputs.new_version }}
+          git checkout -b version-bump-${new_version}
           git add tmp/version.txt
-          git commit -m "Add version file with new version ${{ steps.determine_version.outputs.new_version }}"
-          git pull --rebase origin version-bump-${{ steps.determine_version.outputs.new_version }} || true
-          git push origin HEAD:version-bump-${{ steps.determine_version.outputs.new_version }}
+          git commit -m "Add version file with new version ${new_version}"
+          git pull --rebase origin version-bump-${new_version} || true
+          git push origin HEAD:version-bump-${new_version}
         shell: bash
 
       - name: Create Pull Request
