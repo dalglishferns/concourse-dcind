@@ -45,7 +45,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Determine next version
+      - name: Determine next version of app
         id: determine_version
         run: |
           mkdir -p tmp
