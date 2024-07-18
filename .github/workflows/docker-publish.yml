@@ -66,9 +66,9 @@ jobs:
           minor=${version_parts[1]}
           patch=${version_parts[2]}
           new_patch=$((patch + 1))
-          new_version="v${major}.${minor}.${new_patch}"
+          new_version="${major}.${minor}.${new_patch}"
           echo "New version: $new_version"
-          echo $new_version > tmp/version.txt
+          echo "$new_version" > tmp/version.txt
           echo "::set-output name=new_version::$new_version"
 
       - name: Commit version file
@@ -111,7 +111,9 @@ jobs:
 
       - name: Get current version
         id: get_version
-        run: echo "current_version=$(cat tmp/version.txt)" >> $GITHUB_ENV
+        run: |
+          current_version=$(cat tmp/version.txt | sed 's/^v//')
+          echo "current_version=$current_version" >> $GITHUB_ENV
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
