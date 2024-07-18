@@ -3,7 +3,6 @@ name: Docker
 on:
   push:
     branches: [ "main" ]
-    tags: [ 'v*.*.*' ]
   pull_request:
     branches: [ "main" ]
 
@@ -33,14 +32,30 @@ jobs:
           username: dalglish14
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Get current version
+        id: get_version
+        run: echo "::set-output name=current_version::$(cat VERSION)"
+        
+      - name: Increment version
+        id: increment_version
+        run: |
+          current_version=${{ steps.get_version.outputs.current_version }}
+          new_version=$(echo $current_version | awk -F. '{printf("%d.%d.%d", $1, $2, $3+1)}')
+          echo "New version: $new_version"
+          echo $new_version > VERSION
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          git commit -am "Bump version to $new_version"
+          git tag $new_version
+          git push --follow-tags
+        shell: bash
+
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch,pattern=main,tag=latest
-            type=ref,event=tag,pattern=v*.*.*,tag={{version}}
+          tags: ${{ steps.increment_version.outputs.new_version }}
 
       - name: Cache Docker layers
         uses: actions/cache@v3
@@ -55,10 +70,10 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: .
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ steps.meta.outputs.tags }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.increment_version.outputs.new_version }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
