@@ -39,8 +39,6 @@ jobs:
   version_bump:
     if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
     runs-on: ubuntu-latest
-    outputs:
-      new_version: ${{ steps.determine_version.outputs.new_version }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -88,7 +86,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           head-branch: version-bump-${{ steps.determine_version.outputs.new_version }}
-          base-branch: main
+          base: main
           title: Bump version to ${{ steps.determine_version.outputs.new_version }}
           body: |
             This PR bumps the version to ${{ steps.determine_version.outputs.new_version }}.
