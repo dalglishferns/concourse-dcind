@@ -29,7 +29,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker image test
+      - name: Build Docker image
         uses: docker/build-push-action@v3
         with:
           context: .
@@ -39,6 +39,8 @@ jobs:
   version_bump:
     if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
     runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.determine_version.outputs.new_version }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -56,7 +58,7 @@ jobs:
               latest_tag=$(git describe --tags --abbrev=0)
               latest_version=$(echo $latest_tag | sed 's/v//')
             else
-              latest_version="0.1.0"
+              latest_version="v0.1.0"
             fi
           fi
           IFS='.' read -r -a version_parts <<< "$latest_version"
