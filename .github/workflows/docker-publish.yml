@@ -66,10 +66,10 @@ jobs:
           minor=${version_parts[1]}
           patch=${version_parts[2]}
           new_patch=$((patch + 1))
-          new_version="${major}.${minor}.${new_patch}"
-          echo "New version: v$new_version"
-          echo "v$new_version" > tmp/version.txt
-          echo "new_version=v$new_version" >> $GITHUB_ENV
+          new_version="v${major}.${minor}.${new_patch}"
+          echo "New version: $new_version"
+          echo $new_version > tmp/version.txt
+          echo "::set-output name=new_version::$new_version"
 
       - name: Commit version file
         run: |
