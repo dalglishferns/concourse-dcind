@@ -56,7 +56,7 @@ jobs:
               latest_tag=$(git describe --tags --abbrev=0)
               latest_version=$(echo $latest_tag | sed 's/v//')
             else
-              latest_version="0.1.0"
+              latest_version="v0.1.0"
             fi
           fi
           IFS='.' read -r -a version_parts <<< "$latest_version"
