@@ -88,7 +88,7 @@ jobs:
           labels: version bump
 
   build_and_push:
-    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main' && startsWith(github.event.pull_request.head.ref, 'version-bump-')
+    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'version-bump-')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -120,8 +120,8 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=ref,event=branch,pattern=main,tag=latest
-            type=ref,event=semver,pattern=${{ env.current_version }},prefix=v
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.current_version }}
 
       - name: Cache Docker layers
         uses: actions/cache@v3
@@ -136,7 +136,8 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: |
+            ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
