@@ -35,7 +35,9 @@ jobs:
 
   version_bump:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main'
+    outputs:
+      new_version: ${{ steps.increment_version.outputs.new_version }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -59,8 +61,13 @@ jobs:
           git checkout -b version-bump-$new_version
           git add VERSION
           git commit -m "Bump version to $new_version"
+        shell: bash
+
+      - name: Fetch and rebase before pushing
+        run: |
+          git fetch origin
+          git rebase origin/main
           git push origin HEAD:version-bump-$new_version
-          echo "::set-output name=new_version::${new_version}"
         shell: bash
 
       - name: Create Pull Request
@@ -77,8 +84,7 @@ jobs:
 
   build_and_push:
     runs-on: ubuntu-latest
-    needs: version_bump
-    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.name == 'Docker'
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
     permissions:
       contents: write
       packages: write
@@ -130,9 +136,11 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Push version bump commit and tag
-        if: success()
         run: |
-          git checkout version-bump-${{ needs.version_bump.outputs.new_version }}
-          git push origin HEAD:main --follow-tags
+          git fetch --all
+          git checkout main
+          new_version=$(cat temp_version.txt)
+          git merge version-bump-$new_version
+          git push origin main --follow-tags
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
