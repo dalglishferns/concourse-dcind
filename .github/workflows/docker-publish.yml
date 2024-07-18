@@ -35,7 +35,8 @@ jobs:
 
   version_bump:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: version_bump
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.name == 'Docker'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
