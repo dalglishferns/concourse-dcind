@@ -39,6 +39,8 @@ jobs:
   version_bump:
     if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
     runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.determine_version.outputs.new_version }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -73,11 +75,11 @@ jobs:
         run: |
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
-          git checkout -b version-bump-${{ env.new_version }}
+          git checkout -b version-bump-${{ steps.determine_version.outputs.new_version }}
           git add tmp/version.txt
-          git commit -m "Add version file with new version ${{ env.new_version }}"
-          git pull --rebase origin version-bump-${{ env.new_version }} || true
-          git push origin HEAD:version-bump-${{ env.new_version }}
+          git commit -m "Add version file with new version ${{ steps.determine_version.outputs.new_version }}"
+          git pull --rebase origin version-bump-${{ steps.determine_version.outputs.new_version }} || true
+          git push origin HEAD:version-bump-${{ steps.determine_version.outputs.new_version }}
         shell: bash
 
       - name: Create Pull Request
@@ -85,11 +87,11 @@ jobs:
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          head-branch: version-bump-${{ env.new_version }}
+          head-branch: version-bump-${{ steps.determine_version.outputs.new_version }}
           base-branch: main
-          title: Bump version to ${{ env.new_version }}
+          title: Bump version to ${{ steps.determine_version.outputs.new_version }}
           body: |
-            This PR bumps the version to ${{ env.new_version }}.
+            This PR bumps the version to ${{ steps.determine_version.outputs.new_version }}.
           labels: version bump
 
   build_and_push:
