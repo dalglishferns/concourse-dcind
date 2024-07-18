@@ -11,6 +11,22 @@ env:
   IMAGE_NAME: dalglish14/concourse-dcind
 
 jobs:
+  pr_check:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Run tests
+        run: echo "Running tests..." # Replace with actual test commands
+
   version_bump:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
