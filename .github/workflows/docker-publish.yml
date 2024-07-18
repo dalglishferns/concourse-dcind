@@ -5,7 +5,11 @@ on:
     branches:
       - main
   pull_request:
-    types: [closed]
+    branches:
+      - main
+    types:
+      - opened
+      - closed
 
 env:
   REGISTRY: docker.io
@@ -13,8 +17,8 @@ env:
 
 jobs:
   pr_check:
+    if: github.event_name == 'pull_request' && github.event.action == 'opened'
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
     permissions:
       contents: read
 
@@ -33,8 +37,8 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:pr-test
 
   version_bump:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
     outputs:
       new_version: ${{ steps.determine_version.outputs.new_version }}
     steps:
@@ -70,12 +74,6 @@ jobs:
           git checkout -b version-bump-${{ env.new_version }}
           git add tmp/version.txt
           git commit -m "Add version file with new version ${{ env.new_version }}"
-        shell: bash
-
-      - name: Fetch, rebase, and push branch
-        run: |
-          git fetch origin
-          git rebase origin/version-bump-${{ env.new_version }}
           git push origin HEAD:version-bump-${{ env.new_version }}
         shell: bash
 
@@ -92,8 +90,8 @@ jobs:
           labels: version bump
 
   build_and_push:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'version-bump-')
     runs-on: ubuntu-latest
-    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
     permissions:
       contents: write
       packages: write
