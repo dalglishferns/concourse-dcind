@@ -56,6 +56,7 @@ jobs:
           echo "New version: $new_version"
           echo $new_version > VERSION
           echo $new_version > temp_version.txt
+          echo "::set-output name=new_version::$new_version"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
           git checkout -b version-bump-$new_version
@@ -63,11 +64,11 @@ jobs:
           git commit -m "Bump version to $new_version"
         shell: bash
 
-      - name: Fetch, pull and push new branch
+      - name: Fetch, rebase, and push new branch
         run: |
           git fetch origin
-          git pull origin version-bump-$new_version --rebase || true
-          git push origin HEAD:version-bump-$new_version
+          git rebase origin/main
+          git push origin HEAD:version-bump-${{ steps.increment_version.outputs.new_version }}
         shell: bash
 
       - name: Create Pull Request
@@ -141,7 +142,7 @@ jobs:
           git fetch --all
           git checkout main
           new_version=$(cat temp_version.txt)
-          git merge origin/version-bump-$new_version --no-ff
+          git merge origin/version-bump-${{ needs.version_bump.outputs.new_version }} --no-ff
           git push origin main --follow-tags
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
